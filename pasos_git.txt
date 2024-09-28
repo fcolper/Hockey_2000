@@ -24,7 +24,7 @@ Registros:
 git log
 Checkout:
 git log -> para ver el id del commit
-git checkout id del commit -> se vuelve a la versión del commit mencionado
+git checkout id_del_commit -> se vuelve a la versión del commit mencionado
 git checkout main -> se vuelve a la última versión del commit 
 Visualizar:
 git log --graph
@@ -39,4 +39,11 @@ New-Item .gitignore -> creamos la carpeta
 
 Comparar versiones:
 git diff
+
+Historial completo de interacciones
+git reflog
+
+Tagear commit para no depender de la id
+git tag primer_commit
+git checkout tags/primer_commit
 
