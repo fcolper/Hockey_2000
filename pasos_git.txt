@@ -33,3 +33,10 @@ git log --graph --decorate --all --oneline
 git config --global alias.cualquier_nombre "log --graph --decorate --all --oneline" ->Por defecto se mostrará de esta forma
 git cualquier_nombre -> se mostrará la visualización el comando que queramos
 
+Crea .gitignore:
+New-Item .gitignore -> creamos la carpeta
+**/pasos_git.txt -> agregamos el archivo que no queremos versionar para ignorar en los commit
+
+Comparar versiones:
+git diff
+
