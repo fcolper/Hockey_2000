@@ -1,0 +1,8 @@
+pandas
+beautifulsoup4
+requests
+google-cloud-storage
+google-cloud-bigquery
+pytz
+fsspec
+gcsfs

@@ -1,0 +1,2 @@
+gameId,gameDate,gameType,Team Home,Score Home,Score Away,Team Away,Shot Home EV,Miss Home EV,Block Home EV,Goal Home EV,CF EV,Shot Away EV,Miss Away EV,Block Away EV,Goal Away EV,CA EV,Shot Home 5v5,Miss Home 5v5,Block Home 5v5,Goal Home 5V5,CF 5v5,Shot Away 5v5,Miss Away 5v5,Block Away 5v5,Goal Away 5v5,CA 5v5,First Goal Home,First Goal Away,SOG Home,SOG Away,Faceoff Home,Faceoff Away,Pim Home,Pim Away
+2023021312,2024-04-18,2,LAK,5,4,CHI,28,21,11,3,63,7,6,6,3,22,28,21,11,2,62,7,6,6,3,22,0,1,35,13,0.638298,0.361702,2,8

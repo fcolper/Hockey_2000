@@ -1,0 +1,2 @@
+gameId,gameType,gameDate,Team,Oponente,W_L,L_V,Goal_For_EV,Goal_Against_EV,Shot_For_EV,Miss_For_EV,Block_For_EV,Shot_Against_EV,Miss_Against_EV,Block_Against_EV,First_Goal_For,SOG_For,Faceoff_For,Pim_For,First_Goal_Against,SOG_Against,Faceoff_Against,Pim_Against,day_code
+2023030417,3,2024-06-24,FLA,EDM,1,0,2,1,16,16,14,21,14,16,1,21,0.474576,2,0,24,0.525424,4,0

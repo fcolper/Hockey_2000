@@ -1,0 +1,512 @@
+from datetime import datetime
+import pandas as pd
+import pytz
+from bs4 import BeautifulSoup
+import requests
+#from google.cloud import storage
+import base64
+import re
+
+#def _updateskaters():
+from datetime import datetime
+import pandas as pd
+import pytz
+from bs4 import BeautifulSoup
+import requests
+#from google.cloud import storage
+import base64
+import re
+import time
+
+year=2017
+c=f'Data_csv/Test_Players_{year}-{year+1}.csv'
+
+archivo_base=pd.read_csv(c, sep=',') #DESBLOQUEAR PARA LA SEASON
+
+playoff=pd.read_csv(f'Data_csv/ID_Matches_{year}-{year+1}.csv', sep=',')
+
+playoff.drop_duplicates('id', inplace=True)
+playoff.sort_values('id', inplace=True)
+
+large=playoff['id'].count()
+print('large:',large)
+id_matches_Links=playoff['Links']
+#print(id_matches_Links)
+list_generalHome=[]
+list_generalAway=[]
+contador=0
+
+arch=archivo_base.copy()
+arch.drop_duplicates('gameId', inplace=True)
+arch.sort_values('gameId', inplace=True)
+
+large2=arch['gameId'].count()
+print('archivo base:',large2)
+
+playoff = playoff.iloc[large2:]
+large=playoff['id'].count()
+print('con esto vamos:',large)
+id_matches_Links=playoff['Links']
+
+final_list=[]
+quedan=large
+
+# Función para convertir una cadena de texto en una lista de números
+def convertir_a_lista(elemento):
+    # Verificar si el elemento ya es una lista
+    if isinstance(elemento, list):
+        return elemento
+    else:
+        # Usar una expresión regular para encontrar todos los números en la cadena
+        numeros = re.findall(r'\d+', elemento)
+        # Convertir los números encontrados a enteros y retornar la lista
+        return [int(num) for num in numeros]
+    
+#Eliminar de id_matches_Links el valor 20081:
+#id_matches_Links = id_matches_Links[id_matches_Links != 20081]
+#print(id_matches_Links)
+
+#for l in range(20001, 20001+1):  
+for l in id_matches_Links:
+    print(l)
+    print('Quedan:',quedan)
+    gametype_fila=playoff['Links']==l
+    gametype = int(playoff.loc[gametype_fila, 'gameType'].iat[0])
+    idMatch_fila=int(playoff.loc[gametype_fila, 'id'].iat[0])
+    quedan=quedan-1
+    url=f'https://www.nhl.com/scores/htmlreports/{year}{year+1}/PL0{l}.HTM'  ####MODIFICAR 20242025 EN GCP
+    # Especifica la URL que deseas analizar
+    #url_html = 'https://www.nhl.com/scores/htmlreports/20232024/PL020001.HTM'
+
+    # Realiza una solicitud para obtener el contenido HTML de la página
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+        }
+    response = requests.get(url, headers=headers)
+    print(response)
+    while response.status_code != 200:
+        time.sleep(3)
+        response = requests.get(url, headers=headers)
+        if response.status_code ==200:
+            print('OK')
+
+    html_code = response.text
+
+    soup = BeautifulSoup(html_code, 'html.parser')
+
+    # Lista para almacenar todos los valores
+    all_values_list = []
+
+    def skaters_(url):
+        boxscore=requests.get(url)
+        data=boxscore.json()
+        data_player=data['playerByGameStats']
+        #data_away=data_player['awayTeam']
+        #data_home=data_player['homeTeam']
+        positions=['forwards','defense']
+        teams=['awayTeam','homeTeam']
+        list_datapos=[]
+        df_general=pd.DataFrame()
+        for team in teams:
+            data_team=data_player[team]
+            team_awayhome=data[team]['abbrev']
+            #print(team_awayhome)
+            for pos in positions:
+                data_positions=data_team[pos]
+                player_df=pd.DataFrame(data_positions)
+                player_df['Team'] = team_awayhome
+                player_df = player_df[['Team'] + [col for col in player_df.columns if col not in ['Team']]]
+                list_datapos.append(player_df)
+                #df_general=pd.concat(list, ignore_index=True)
+
+        df_concat = pd.concat(list_datapos, ignore_index=True)
+        return df_concat
+    
+    skaters=skaters_(f'https://api-web.nhle.com/v1/gamecenter/{year}0{l}/boxscore') ###Cambiar a 2024 si la season es 2024-2025
+    team_replacements = {
+    'TBL':'T.B',
+    'LAK':'L.A',
+    'NJD':'N.J',
+    'SJS':'S.J'
+    }
+
+    # Reemplazar los valores en la columna 'Team' del dataframe
+    skaters['Team'] = skaters['Team'].replace(team_replacements)
+    #print(skaters)
+    # Find all the rows with class evenColor or oddColor
+    filas = soup.find_all('tr', class_=['evenColor', 'oddColor'])
+
+    for play in filas:
+        # Extract data from each column
+        play_data = play.find_all('td')
+
+        # Check if play_data is not None before trying to find a table
+        if play_data:
+            # Extracting play information
+            play_number = play_data[0].text
+            period = play_data[1].text
+            event_type = play_data[2].text
+            time_info = play_data[3].text
+            html_time = play_data[3]
+            td_content = html_time.find('br')
+            result_time = str(td_content.previous_sibling).strip()
+            event_description = play_data[4].text
+            additional_info = play_data[5].text
+
+            # Check if additional_info is 'GOAL' and modify play_info class accordingly
+            if event_description.strip() == 'GOAL':
+                play_info = play.find('td', class_='bold + bborder + rborder')
+            elif event_description.strip() == 'PENL':
+                play_info = play.find('td', class_='italicize + bold + bborder + rborder')
+            else:
+                play_info = play.find('td', class_='+ bborder + rborder')
+
+            # Variables para almacenar los valores actuales
+            current_values = {
+                'Play Number': play_number,
+                'Period': period,
+                'Event Type': event_type,
+                'Time Info': result_time,
+                'Event Description': event_description,
+                'Additional Info': additional_info,
+            }
+
+            if play_info:
+                table = play_info.find('table')
+                # Check if table is not None and not empty
+                if table and table.contents:
+                    # Inicializar una lista para almacenar los números de los jugadores
+                    numeros_jugadores = []
+
+                    # Recorrer todas las filas de la primera tabla principal
+                    for fila in table.find_all('tr'):
+                        # Obtener la etiqueta <font> en la celda actual de la fila
+                        font_tag = fila.find('font')
+                        # Verificar si la etiqueta <font> está presente
+                        if font_tag:
+                            # Obtener el texto dentro de la etiqueta <font> (número del jugador)
+                            numero_jugador = font_tag.get_text(strip=True)
+                            numeros_jugadores.append(numero_jugador)
+                            if len(numeros_jugadores) >6:
+                                break
+                            list_numeros_jugadores = [int(x) for x in numeros_jugadores]
+
+                    # Añadir los valores a la lista general
+                    current_values['awayTeam'] = list_numeros_jugadores[1:]
+                else:
+                    current_values['awayTeam'] = ''
+
+            if event_description.strip() == 'GOAL':
+                play_info = play.find('td', class_='bold + bborder')
+            elif event_description.strip() == 'PENL':
+                play_info = play.find('td', class_='italicize + bold + bborder')
+            else:
+                play_info = play.find_all('td', class_='+ bborder')
+
+            if len(play_info) < 4:
+                table = play_info.find('table')
+                # Check if table is not None and not empty
+                if table and table.contents:
+                    # Inicializar una lista para almacenar los números de los jugadores
+                    numeros_jugadores_home = []
+
+                    # Recorrer todas las filas de la primera tabla principal
+                    for fila in table.find_all('tr'):
+                        # Obtener la etiqueta <font> en la celda actual de la fila
+                        font_tag = fila.find('font')
+                        # Verificar si la etiqueta <font> está presente
+                        if font_tag:
+                            # Obtener el texto dentro de la etiqueta <font> (número del jugador)
+                            numero_jugador_home = font_tag.get_text(strip=True)
+                            numeros_jugadores_home.append(numero_jugador_home)
+
+                    list_numeros_jugadores_home = [int(x) for x in numeros_jugadores_home]
+                    # Añadir los valores a la lista general
+                    current_values['homeTeam'] = list_numeros_jugadores_home[1:]
+                else:
+                    current_values['homeTeam'] = ''
+            else:
+                table = play_info[6].find('table')
+                # Check if table is not None and not empty
+                if table and table.contents:
+                    # Inicializar una lista para almacenar los números de los jugadores
+                    numeros_jugadores_home = []
+
+                    # Recorrer todas las filas de la primera tabla principal
+                    for fila in table.find_all('tr'):
+                        # Obtener la etiqueta <font> en la celda actual de la fila
+                        font_tag = fila.find('font')
+                        # Verificar si la etiqueta <font> está presente
+                        if font_tag:
+                            # Obtener el texto dentro de la etiqueta <font> (número del jugador)
+                            numero_jugador_home = font_tag.get_text(strip=True)
+                            numeros_jugadores_home.append(numero_jugador_home)
+                            list_numeros_jugadores_home = [int(x) for x in numeros_jugadores_home]
+
+                    # Añadir los valores a la lista general
+                    current_values['homeTeam'] = list_numeros_jugadores_home[1:]
+                else:
+                    current_values['homeTeam'] = ''
+
+            # Añadir el conjunto actual de valores a la lista general
+            all_values_list.append(current_values)
+
+
+
+    #Imprimir la lista completa de valores al final
+    #print(all_values_list)
+    #for l in all_values_list:
+    #    print(l)
+
+    columnas=soup.find_all('td',class_=['heading + bborder'])
+    #print(len(columnas))
+    cont=0
+    list_columnas=[]
+    for colum in columnas:
+        cont=cont+1
+        #print(colum.text)
+        list_columnas.append(colum.text)
+        if cont >7:
+            break
+
+    #print(list_columas)
+
+    #print(all_values_list[321])
+
+    df=pd.DataFrame(all_values_list)
+    df.columns=list_columnas
+    #print('DF: ', df)
+
+    #print(df['TBL On Ice'])
+
+    df['Team']=df['Description'].str.slice(0,3)
+    #print(df['Team'])
+    list_a=[]
+    list_b=[]
+    list_skt=[]
+    AKA_away_team = list_columnas[6].split()[0]  # 'NSH'
+    AKA_home_team = list_columnas[7].split()[0]  # 'TBL'
+    teams=[AKA_away_team,AKA_home_team]
+
+    for indice, team_jugadas in enumerate(teams):
+        #print('Team Jugadas:', team_jugadas)
+        indice_otro_team=1-indice
+        team_players=teams[indice_otro_team]
+        #print('Team Players:',team_players)
+        df_home=df[df['Team'] == team_jugadas]
+
+        lista_frances=list(df_home.columns)
+        str_frances=lista_frances[2]
+        event_frances=lista_frances[4]
+        #print(str_frances,event_frances)
+    
+        if 'Sit.Str' in str_frances:
+            df_home_EV=df_home[df_home[str_frances]=='EV']
+            skaters_edit=skaters[skaters['Team']==team_jugadas]
+            for valor in skaters_edit['sweaterNumber']:
+                # Filtrar el DataFrame usando el valor actual de 'sweaterNumber'
+                id_skaters=skaters_edit[skaters_edit['sweaterNumber']==valor]
+                number_id = id_skaters['playerId'].iloc[0]
+                name_player= id_skaters['name'].iloc[0]['default']
+                poss_id = id_skaters['position'].iloc[0]
+                goal_id = id_skaters['goals'].iloc[0]
+                assis_id = id_skaters['assists'].iloc[0]
+                point_id = id_skaters['points'].iloc[0]
+                pim_id = id_skaters['pim'].iloc[0]
+                hits_id = id_skaters['hits'].iloc[0]
+                shot_id = id_skaters['shots'].iloc[0]
+                toi_id = id_skaters['toi'].iloc[0]
+                #print('ID_SKATERS:',poss_id, goal_id,assis_id,point_id,pim_id,hits_id,shot_id,toi_id )
+                list_skt.append({'id_skaters':number_id,
+                                'position':poss_id,
+                                'goals':goal_id,
+                                'assists':assis_id,
+                                'points':point_id,
+                                'pim':pim_id,
+                                'hits':hits_id,
+                                'shot':shot_id,
+                                'toi':toi_id})
+                #df_home_EV[f'{team_jugadas} On Ice'] = df_home_EV[f'{team_jugadas} On Ice'].apply(convertir_a_lista)
+                df_home_EV.loc[:, f'{team_jugadas} On Ice'] = df_home_EV[f'{team_jugadas} On Ice'].apply(convertir_a_lista)
+                df_home_EV_filtrada = df_home_EV[df_home_EV[f'{team_jugadas} On Ice'].apply(lambda x: valor in x)]
+                # Contar la cantidad de eventos de cada tipo en el DataFrame filtrado
+                shot_count_cf = df_home_EV_filtrada[df_home_EV_filtrada[event_frances] == 'SHOT'].shape[0]
+                miss_count_cf = df_home_EV_filtrada[df_home_EV_filtrada[event_frances] == 'MISS'].shape[0]
+                block_count_cf = df_home_EV_filtrada[df_home_EV_filtrada[event_frances] == 'BLOCK'].shape[0]
+                goal_count_cf = df_home_EV_filtrada[df_home_EV_filtrada[event_frances] == 'GOAL'].shape[0]
+                
+                # Calcular el total de eventos
+                cf_player_cf = shot_count_cf + miss_count_cf + block_count_cf + goal_count_cf
+                
+                list_a.append({'team':team_jugadas,
+                            'gameId':idMatch_fila,
+                            'gameType': gametype,
+                            'sweaterNumber':valor,
+                            'id_skaters':number_id,
+                            'name_player':name_player,
+                            'shot_cf':shot_count_cf,
+                            'miss_cf':miss_count_cf,
+                            'block_cf':block_count_cf,
+                            'goal_cf':goal_count_cf,
+                            'CF':cf_player_cf})
+            skaters_edit=skaters[skaters['Team']==team_players]            
+            ###################
+        else:    
+            df_home_EV=df_home[df_home['Str']=='EV']
+            skaters_edit=skaters[skaters['Team']==team_jugadas]
+            for valor in skaters_edit['sweaterNumber']:
+                # Filtrar el DataFrame usando el valor actual de 'sweaterNumber'
+                id_skaters=skaters_edit[skaters_edit['sweaterNumber']==valor]
+                number_id = id_skaters['playerId'].iloc[0]
+                name_player= id_skaters['name'].iloc[0]['default']
+                poss_id = id_skaters['position'].iloc[0]
+                goal_id = id_skaters['goals'].iloc[0]
+                assis_id = id_skaters['assists'].iloc[0]
+                point_id = id_skaters['points'].iloc[0]
+                pim_id = id_skaters['pim'].iloc[0]
+                hits_id = id_skaters['hits'].iloc[0]
+                shot_id = id_skaters['shots'].iloc[0]
+                toi_id = id_skaters['toi'].iloc[0]
+                #print('ID_SKATERS:',poss_id, goal_id,assis_id,point_id,pim_id,hits_id,shot_id,toi_id )
+                list_skt.append({'id_skaters':number_id,
+                                'position':poss_id,
+                                'goals':goal_id,
+                                'assists':assis_id,
+                                'points':point_id,
+                                'pim':pim_id,
+                                'hits':hits_id,
+                                'shot':shot_id,
+                                'toi':toi_id})
+                #df_home_EV[f'{team_jugadas} On Ice'] = df_home_EV[f'{team_jugadas} On Ice'].apply(convertir_a_lista)
+                df_home_EV.loc[:, f'{team_jugadas} On Ice'] = df_home_EV[f'{team_jugadas} On Ice'].apply(convertir_a_lista)
+                df_home_EV_filtrada = df_home_EV[df_home_EV[f'{team_jugadas} On Ice'].apply(lambda x: valor in x)]
+                # Contar la cantidad de eventos de cada tipo en el DataFrame filtrado
+                shot_count_cf = df_home_EV_filtrada[df_home_EV_filtrada['Event'] == 'SHOT'].shape[0]
+                miss_count_cf = df_home_EV_filtrada[df_home_EV_filtrada['Event'] == 'MISS'].shape[0]
+                block_count_cf = df_home_EV_filtrada[df_home_EV_filtrada['Event'] == 'BLOCK'].shape[0]
+                goal_count_cf = df_home_EV_filtrada[df_home_EV_filtrada['Event'] == 'GOAL'].shape[0]
+                
+                # Calcular el total de eventos
+                cf_player_cf = shot_count_cf + miss_count_cf + block_count_cf + goal_count_cf
+                
+                list_a.append({'team':team_jugadas,
+                            'gameId':idMatch_fila,
+                            'gameType': gametype,
+                            'sweaterNumber':valor,
+                            'id_skaters':number_id,
+                            'name_player':name_player,
+                            'shot_cf':shot_count_cf,
+                            'miss_cf':miss_count_cf,
+                            'block_cf':block_count_cf,
+                            'goal_cf':goal_count_cf,
+                            'CF':cf_player_cf})
+            skaters_edit=skaters[skaters['Team']==team_players]
+
+        for valor in skaters_edit['sweaterNumber']:
+            #print(valor)
+            # Filtrar el DataFrame usando el valor actual de 'sweaterNumber'
+            id_skaters=skaters_edit[skaters_edit['sweaterNumber']==valor]
+            number_id = id_skaters['playerId'].iloc[0]
+            df_home_EV.loc[:, f'{team_players} On Ice'] = df_home_EV[f'{team_players} On Ice'].apply(convertir_a_lista)
+            #df_home_EV[f'{team_players} On Ice'] = df_home_EV[f'{team_players} On Ice'].apply(convertir_a_lista)
+            df_home_EV_filtrada = df_home_EV[df_home_EV[f'{team_players} On Ice'].apply(lambda x: valor in x)]
+            # Contar la cantidad de eventos de cada tipo en el DataFrame filtrado
+            if 'Sit.Str' in str_frances:
+                shot_count_ca = df_home_EV_filtrada[df_home_EV_filtrada[event_frances] == 'SHOT'].shape[0]
+                miss_count_ca = df_home_EV_filtrada[df_home_EV_filtrada[event_frances] == 'MISS'].shape[0]
+                block_count_ca = df_home_EV_filtrada[df_home_EV_filtrada[event_frances] == 'BLOCK'].shape[0]
+                goal_count_ca = df_home_EV_filtrada[df_home_EV_filtrada[event_frances] == 'GOAL'].shape[0]
+            else:
+                shot_count_ca = df_home_EV_filtrada[df_home_EV_filtrada['Event'] == 'SHOT'].shape[0]
+                miss_count_ca = df_home_EV_filtrada[df_home_EV_filtrada['Event'] == 'MISS'].shape[0]
+                block_count_ca = df_home_EV_filtrada[df_home_EV_filtrada['Event'] == 'BLOCK'].shape[0]
+                goal_count_ca = df_home_EV_filtrada[df_home_EV_filtrada['Event'] == 'GOAL'].shape[0]
+            
+            # Calcular el total de eventos
+            ca_player_ca = shot_count_ca + miss_count_ca + block_count_ca + goal_count_ca
+            
+            list_b.append({'team':team_players,
+                        'gameId':idMatch_fila,
+                        'gameType': gametype,
+                        'sweaterNumber':valor,
+                        'id_skaters':number_id,
+                        'name_player':name_player,
+                        'shot_ca':shot_count_ca,
+                        'miss_ca':miss_count_ca,
+                        'block_ca':block_count_ca,
+                        'goal_ca':goal_count_ca,
+                        'CA':ca_player_ca})
+
+
+            #PRUEBA#
+            
+    #Con esto filtro el 5vs5:
+            #df_filtrado = df.loc[(df[list_columnas[6]].apply(len) == 6) & (df[list_columnas[7]].apply(len) == 6)]
+    #print(list_a)
+    df_players_cf=pd.DataFrame(list_a)
+    #print(df_players_cf)
+
+    df_players_ca=pd.DataFrame(list_b)
+    #print(df_players_ca)
+    df_players=pd.DataFrame(list_skt)
+    merged_df = pd.merge(df_players_cf, df_players_ca, on=['team','gameType','sweaterNumber','gameId','id_skaters'], how='outer')
+    otro_merged=pd.merge(merged_df,df_players,on=['id_skaters'])
+    #print(merged_df)
+    final_list.append(otro_merged)
+#print(final_list)
+column_names = ['team','gameType','gameId', 'sweaterNumber','id_skaters','shot_cf', 'miss_cf', 'block_cf', 'goal_cf','CF', 'shot_ca', 'miss_ca', 'block_ca', 'goal_ca', 'CA']
+
+df_concat=pd.DataFrame()
+for df in final_list:
+    #print(df)
+    #print(type(df))
+    df_concat=pd.concat([df_concat,df], ignore_index=True)
+#print(df_concat)
+# Función para obtener nombre y apellido a partir del ID
+# def obtener_nombre_apellido(number_id):
+#     url_player = f'https://api-web.nhle.com/v1/player/{number_id}/landing'
+#     try:
+#         response = requests.get(url_player)
+#         data_name = response.json()
+#         # Obtener los valores del JSON, asumiendo que la estructura es correcta
+#         name = data_name.get('firstName', {}).get('default', 'N/A')
+#         last_name = data_name.get('lastName', {}).get('default', 'N/A')
+#         return pd.Series([name, last_name])
+#     except Exception as e:
+#         print(f"Error al obtener datos para el ID {number_id}: {e}")
+#         return pd.Series(['N/A', 'N/A'])  # Valores por defecto si hay error
+
+# # Aplicar la función a cada fila del DataFrame y asignar a las nuevas columnas
+# df_concat[['name', 'last_name']] = df_concat['id_skaters'].apply(obtener_nombre_apellido)
+
+column_names = ['gameId','gameType','team','id_skaters','position','sweaterNumber','goals','assists','points','pim','hits','shot','toi','shot_cf', 'miss_cf', 'block_cf', 'goal_cf', 'CF', 'shot_ca', 'miss_ca', 'block_ca', 'goal_ca', 'CA']
+df_concat = df_concat.reindex(columns=column_names)
+#print('Dtypes df_concat: ', df_concat.dtypes)
+
+#id_players='gs://nhl-test-2/Players_20002025.csv'  ###DESBLOQUEAR PARA LA SEASON GCP
+
+id_players='Data_csv/Players_20002025.csv'  ###SOLO PARA TEST
+
+id_skaters=pd.read_csv(id_players)
+id_skaters = id_skaters.rename(columns={'id': 'id_skaters'})
+col=['id_skaters','firstName','lastName']
+df_concat = pd.merge(df_concat, id_skaters[col], on='id_skaters', how='left')
+
+#corsi_skaters = df_concat.copy()  ###SOLO PARA TEST
+
+corsi_skaters=pd.concat([archivo_base,df_concat], ignore_index=True) ###DESBLOQUEAR PARA LA SEASON GCP
+
+#print('Dtypes: ', corsi_skaters.dtypes)
+
+
+float_columns = corsi_skaters.select_dtypes(include=['float64']).columns
+corsi_skaters[float_columns] = corsi_skaters[float_columns].astype(int)
+corsi_skaters['gameId'] = corsi_skaters['gameId'].astype(int)
+corsi_skaters=corsi_skaters.sort_values('gameId')
+#print('Archivo CSV:', corsi_skaters)
+
+#corsi_skaters.to_csv(archivo, index=False)  ###DESBLOQUEAR PARA LA SEASON GCP
+
+#print('Dtypes: ', corsi_skaters.dtypes)
+
+corsi_skaters.to_csv(c, index=False)
