@@ -47,3 +47,20 @@ Tagear commit para no depender de la id
 git tag primer_commit
 git checkout tags/primer_commit
 
+#CONECTARSE A GITHUB
+
+Abrir gitbash
+$ ssh-keygen -t ed25519 -C "fabian.colper@gmail.com"
+Luego crear las claves SSH si no las tienes, seguir los pasos.
+
+Crear un repositorio
+
+En la parte de codigo seleccionar SSH
+git@github.com:fcolper/Hockey_2000.git
+
+En la consola y en el directorio del proyecto
+git remote add origin git@github.com:fcolper/Hockey_2000.git
+
+Hacemos el push
+git push -u origin main
+
