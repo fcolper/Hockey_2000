@@ -1,0 +1,25 @@
+Abrir la consola
+ls para ver el contenido de la carpeta
+cd Escritorio para ir a la dirección
+mkdir "carpeta_nueva" para crear una carpeta
+
+Configurar con variables locales, principalmente cuando uno trabaja sólo:
+git config --global user.name "John Doe"
+git config --global user.email johndoe@example.com
+git config --list
+
+Inicializando:
+git init
+Renombrar la rama como main:
+git branch -m main
+Ver el status:
+git status
+Agregar un fichero o versionar:
+git add nombre_archivo.py
+git add --all
+Commit:
+git commit  -> sin un mensaje se abre VIM, para salir :q!
+git commit -m "Primer commit"
+Registros:
+git log
+Checkout
