@@ -8,7 +8,8 @@ La obtención de los datos, códigos y técnicas utilizadas se puede ver en la c
 ## Gráfico de Jugadores
 A continuación, dejo un gráfico que muestra el lugar de nacimiento de los jugadores registrados en la NHL y que han sido parte de alguna temporada desde el año 2000.
 
-[Ver gráfico interactivo de jugadores](https://fcolper.github.io/Hockey_2000/jugadores_mapa_filtrado_2.html){:target="_blank"}
+<a href="https://fcolper.github.io/Hockey_2000/jugadores_mapa_filtrado_2.html" target="_blank">Ver gráfico interactivo de jugadores</a>
+
 
 
 
