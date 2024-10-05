@@ -81,14 +81,72 @@ df.to_csv("Data_csv/Test_Players_2023-2024.csv", index=False)
 # archivo_base.to_csv('Data_csv/TeamsMatches_2018-2019.csv', index=False)
 
 
-csv='Data_csv/Players_20002024_test.csv'
-csv_2025='Data_csv/Players_20242025_test.csv'
+# csv='Data_csv/Players_20002024_test.csv'
+# csv_2025='Data_csv/Players_20242025_test.csv'
 
-df=pd.read_csv(csv)
-df_2025=pd.read_csv(csv_2025)
+# df=pd.read_csv(csv)
+# df_2025=pd.read_csv(csv_2025)
 
-df=pd.concat([df,df_2025], ignore_index=True)
-df.drop_duplicates(subset=['id'], inplace=True)
-df = df.drop(df.columns[0], axis=1)
-df.sort_values(by=['Season'], inplace=True)
-df.to_csv('Data_csv/Players_20002025_test.csv', index=False)
+# df=pd.concat([df,df_2025], ignore_index=True)
+# df.drop_duplicates(subset=['id'], inplace=True)
+# df = df.drop(df.columns[0], axis=1)
+# df.sort_values(by=['Season'], inplace=True)
+# df.to_csv('Data_csv/Players_20002025_test.csv', index=False)
+
+url='https://api-web.nhle.com/v1/schedule/2024-10-04' #Test
+response=requests.get(url)
+print(response)
+data=response.json()
+matches=data['gameWeek']
+matches_2=matches[0]
+print(len(matches_2))
+date=data['gameWeek'][0]['date']
+matches_2=matches[0]
+print(len(matches_2['games']))
+# new_df=pd.DataFrame(matches_2['games'])
+# print(new_df.columns)
+# new_df['Links']=new_df['id'].astype(str).str[-5:]
+# new_df['gameDate']=date
+# columnas=['id','season','Links','gameDate','gameType']
+# playoff=new_df[columnas]
+# print(playoff)
+
+
+# new_url=f'https://api-web.nhle.com/v1/wsc/game-story/{l}'
+# response=requests.get(new_url)
+# data=response.json()
+# #first_per=len(data['summary']['scoring'][0]['goals'])
+# first_per=len(data['summary']['scoring'][0]['goals'])
+# if first_per > 0:
+#     first_goal_home=int(data['summary']['scoring'][0]['goals'][0]['homeScore'])
+#     first_goal_away=int(data['summary']['scoring'][0]['goals'][0]['awayScore'])
+# elif first_per == 0:
+#     first_per=len(data['summary']['scoring'][1]['goals'])
+#     if first_per > 0:
+#         first_goal_home=int(data['summary']['scoring'][1]['goals'][0]['homeScore'])
+#         first_goal_away=int(data['summary']['scoring'][1]['goals'][0]['awayScore'])
+#     else:
+#         first_per=len(data['summary']['scoring'][2]['goals'])
+#         if first_per > 0:
+#             first_goal_home=int(data['summary']['scoring'][2]['goals'][0]['homeScore'])
+#             first_goal_away=int(data['summary']['scoring'][2]['goals'][0]['awayScore'])
+#         else:
+#             first_goal_home=0
+#             first_goal_away=0
+
+# sog_home=int(data['summary']['teamGameStats'][0]['homeValue'])
+# sog_away=int(data['summary']['teamGameStats'][0]['awayValue'])
+# face_home=float(data['summary']['teamGameStats'][1]['homeValue'])
+# face_away=float(data['summary']['teamGameStats'][1]['awayValue'])
+# pim_home=int(data['summary']['teamGameStats'][4]['homeValue'])
+# pim_away=int(data['summary']['teamGameStats'][4]['awayValue'])
+# hits_home=int(data['summary']['teamGameStats'][5]['homeValue'])
+# hits_away=int(data['summary']['teamGameStats'][5]['awayValue'])
+# #first_goal_home=int(data['summary']['scoring'][0]['goals'][0]['homeScore'])
+# #first_goal_away=int(data['summary']['scoring'][0]['goals'][0]['awayScore'])
+# face_home=float(data['summary']['teamGameStats'][1]['homeValue'])
+# face_away=float(data['summary']['teamGameStats'][1]['awayValue'])
+# pim_home=int(data['summary']['teamGameStats'][4]['homeValue'])
+# pim_away=int(data['summary']['teamGameStats'][4]['awayValue'])
+# hits_home=int(data['summary']['teamGameStats'][5]['homeValue'])
+# hits_away=int(data['summary']['teamGameStats'][5]['awayValue']) 
