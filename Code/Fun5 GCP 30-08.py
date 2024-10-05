@@ -18,18 +18,21 @@ import json
 
 #archivo_base=pd.read_csv(f'Data_csv/Test_teams_zero_GCP.csv', sep=',') #DESBLOQUEAR PARA LA SEASON
 #url='https://api-web.nhle.com/v1/schedule/now'  #DESBLOQUEAR PARA LA SEASON GCP
-url='https://api-web.nhle.com/v1/schedule/2024-09-23' #Test
+url='https://api-web.nhle.com/v1/schedule/2024-10-02' #Test
 response=requests.get(url)
 print(response)
 data=response.json()
 matches=data['gameWeek']
 matches_2=matches[0]
-df=pd.DataFrame(matches_2)
-#print(df.loc[3, 'games']['id'])
-games_list=df['games'].tolist()
-new_df=pd.DataFrame(games_list)
+# df=pd.DataFrame(matches_2)
+date=data['gameWeek'][0]['date']
+new_df=pd.DataFrame(matches_2['games'])
+# games_list=df['games'].tolist()
+# new_df=pd.DataFrame(games_list)
 new_df['Links']=new_df['id'].astype(str).str[-5:]
-new_df['gameDate']=df['date']
+
+# new_df['gameDate']=df['date']
+new_df['gameDate']=date
 columnas=['id','season','Links','gameDate','gameType']
 playoff=new_df[columnas]
 
@@ -308,7 +311,8 @@ for l in id_matches_Links:
     fecha_game=fila_buscar['gameDate'].values[0]
     fecha_str = str(fecha_game)
     fecha_game = datetime.strptime(fecha_str, '%Y-%m-%dT%H:%M:%S.%f000').strftime('%Y-%m-%d') if '.' in fecha_str else fecha_str
-    new_url=f'https://api-web.nhle.com/v1/gamecenter/20230{l}/landing' #Cambiar a 2024 si la season es 2024-2025
+    #new_url=f'https://api-web.nhle.com/v1/gamecenter/20240{l}/landing' #Cambiar a 2024 si la season es 2024-2025
+    new_url=f'https://api-web.nhle.com/v1/wsc/game-story/20240{l}'
     response=requests.get(new_url)
     data=response.json()
     #first_per=len(data['summary']['scoring'][0]['goals'])
